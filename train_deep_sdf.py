@@ -11,9 +11,14 @@ import math
 import json
 import time
 
+import numpy as np
+
 import deep_sdf
 import deep_sdf.workspace as ws
 
+import logging
+import wandb
+wandb.init(project="all_ws_no_reg_cap_init256", entity="mirshad")
 
 class LearningRateSchedule:
     def get_learning_rate(self, epoch):
@@ -253,7 +258,7 @@ def main_function(experiment_directory, continue_from, batch_split):
     logging.debug("running " + experiment_directory)
 
     specs = ws.load_experiment_specifications(experiment_directory)
-
+    print("specs[Description]", specs["Description"])
     logging.info("Experiment description: \n" + specs["Description"])
 
     data_source = specs["DataSource"]
@@ -321,7 +326,7 @@ def main_function(experiment_directory, continue_from, batch_split):
     maxT = clamp_dist
     enforce_minmax = True
 
-    do_code_regularization = get_spec_with_default(specs, "CodeRegularization", True)
+    do_code_regularization = get_spec_with_default(specs, "CodeRegularization", False)
     code_reg_lambda = get_spec_with_default(specs, "CodeRegularizationLambda", 1e-4)
 
     code_bound = get_spec_with_default(specs, "CodeBound", None)
@@ -361,12 +366,13 @@ def main_function(experiment_directory, continue_from, batch_split):
     logging.info("There are {} scenes".format(num_scenes))
 
     logging.debug(decoder)
-
-    lat_vecs = torch.nn.Embedding(num_scenes, latent_size, max_norm=code_bound)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    lat_vecs = torch.nn.Embedding(num_scenes, latent_size, max_norm=code_bound).to(device)
+    init_size_std = 256
     torch.nn.init.normal_(
         lat_vecs.weight.data,
         0.0,
-        get_spec_with_default(specs, "CodeInitStdDev", 1.0) / math.sqrt(latent_size),
+        get_spec_with_default(specs, "CodeInitStdDev", 1.0) / math.sqrt(init_size_std),
     )
 
     logging.debug(
@@ -459,6 +465,8 @@ def main_function(experiment_directory, continue_from, batch_split):
 
         adjust_learning_rate(lr_schedules, optimizer_all, epoch)
 
+        loss_values = []
+
         for sdf_data, indices in sdf_loader:
 
             # Process the input data
@@ -488,9 +496,9 @@ def main_function(experiment_directory, continue_from, batch_split):
 
             for i in range(batch_split):
 
-                batch_vecs = lat_vecs(indices[i])
+                batch_vecs = lat_vecs(indices[i].to(device))
 
-                input = torch.cat([batch_vecs, xyz[i]], dim=1)
+                input = torch.cat([batch_vecs, xyz[i].to(device)], dim=1)
 
                 # NN optimization
                 pred_sdf = decoder(input)
@@ -499,6 +507,10 @@ def main_function(experiment_directory, continue_from, batch_split):
                     pred_sdf = torch.clamp(pred_sdf, minT, maxT)
 
                 chunk_loss = loss_l1(pred_sdf, sdf_gt[i].cuda()) / num_sdf_samples
+
+                logging.debug("chunk loss {}".format(chunk_loss))
+                
+                # print("chunk_loss, epoch", chunk_loss, epoch)
 
                 if do_code_regularization:
                     l2_size_loss = torch.sum(torch.norm(batch_vecs, dim=1))
@@ -509,17 +521,14 @@ def main_function(experiment_directory, continue_from, batch_split):
                     chunk_loss = chunk_loss + reg_loss.cuda()
 
                 chunk_loss.backward()
-
                 batch_loss += chunk_loss.item()
-
+                # print("reg_loss, epoch", reg_loss, epoch)
+            # logging.info("loss = {}".format(batch_loss))
             logging.debug("loss = {}".format(batch_loss))
-
             loss_log.append(batch_loss)
-
+            loss_values.append(batch_loss)
             if grad_clip is not None:
-
                 torch.nn.utils.clip_grad_norm_(decoder.parameters(), grad_clip)
-
             optimizer_all.step()
 
         end = time.time()
@@ -535,6 +544,8 @@ def main_function(experiment_directory, continue_from, batch_split):
 
         if epoch in checkpoints:
             save_checkpoints(epoch)
+
+        wandb.log({"loss": np.mean(loss_values)})
 
         if epoch % log_frequency == 0:
 

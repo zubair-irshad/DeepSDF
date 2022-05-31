@@ -25,7 +25,7 @@ def load_logs(experiment_directory, type):
     iters_per_epoch = num_iters / logs["epoch"]
 
     logging.info("{} iters per epoch".format(iters_per_epoch))
-
+    print("logs loss",logs["loss"] )
     smoothed_loss_41 = running_mean(logs["loss"], 41)
     smoothed_loss_1601 = running_mean(logs["loss"], 1601)
 

@@ -381,7 +381,7 @@ int main(int argc, char** argv) {
   pangolin::Image<uint32_t> modelFaces = pangolin::get<pangolin::Image<uint32_t>>(
       geom.objects.begin()->second.attributes["vertex_indices"]);
 
-  float max_dist = BoundingCubeNormalization(geom, true);
+  // float max_dist = BoundingCubeNormalization(geom, true);
 
   if (vis)
     pangolin::CreateWindowAndBind("Main", 640, 480);
@@ -399,13 +399,23 @@ int main(int argc, char** argv) {
   glShadeModel(GL_FLAT);
 
   // Define Projection and initial ModelView matrix
+  // pangolin::OpenGlRenderState s_cam(
+  //     //                pangolin::ProjectionMatrix(640,480,420,420,320,240,0.05,100),
+  //     pangolin::ProjectionMatrixOrthographic(-max_dist, max_dist, -max_dist, max_dist, 0, 2.5),
+  //     pangolin::ModelViewLookAt(0, 0, -1, 0, 0, 0, pangolin::AxisY));
+  // pangolin::OpenGlRenderState s_cam2(
+  //     pangolin::ProjectionMatrixOrthographic(-max_dist, max_dist, max_dist, -max_dist, 0, 2.5),
+  //     pangolin::ModelViewLookAt(0, 0, -1, 0, 0, 0, pangolin::AxisY));
+
+
   pangolin::OpenGlRenderState s_cam(
       //                pangolin::ProjectionMatrix(640,480,420,420,320,240,0.05,100),
-      pangolin::ProjectionMatrixOrthographic(-max_dist, max_dist, -max_dist, max_dist, 0, 2.5),
+      pangolin::ProjectionMatrixOrthographic(-1, 1, -1, 1, 0, 2.5),
       pangolin::ModelViewLookAt(0, 0, -1, 0, 0, 0, pangolin::AxisY));
   pangolin::OpenGlRenderState s_cam2(
-      pangolin::ProjectionMatrixOrthographic(-max_dist, max_dist, max_dist, -max_dist, 0, 2.5),
+      pangolin::ProjectionMatrixOrthographic(-1, 1, 1, -1, 0, 2.5),
       pangolin::ModelViewLookAt(0, 0, -1, 0, 0, 0, pangolin::AxisY));
+
 
   // Create Interactive View in window
   pangolin::Handler3D handler(s_cam);
@@ -448,7 +458,8 @@ int main(int argc, char** argv) {
   pangolin::GlFramebuffer framebuffer(vertices, normals, zbuffer);
 
   // View points around a sphere.
-  std::vector<Eigen::Vector3f> views = EquiDistPointsOnSphere(100, max_dist * 1.1);
+  // std::vector<Eigen::Vector3f> views = EquiDistPointsOnSphere(100, max_dist * 1.1);
+  std::vector<Eigen::Vector3f> views = EquiDistPointsOnSphere(100, 1.1);
 
   std::vector<Eigen::Vector4f> point_normals;
   std::vector<Eigen::Vector4f> point_verts;

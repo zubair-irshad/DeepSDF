@@ -10,6 +10,9 @@ import subprocess
 
 import deep_sdf
 import deep_sdf.workspace as ws
+from tqdm import tqdm
+# envir = os.environ.copy()
+# envir["PANGOLIN_WINDOW_URI"] = "headless://"
 
 
 def filter_classes_glob(patterns, classes):
@@ -123,7 +126,7 @@ if __name__ == "__main__":
     arg_parser.add_argument(
         "--threads",
         dest="num_threads",
-        default=8,
+        default=64,
         help="The number of threads to use to process the data.",
     )
     arg_parser.add_argument(
@@ -208,7 +211,7 @@ if __name__ == "__main__":
         if not os.path.isdir(target_dir):
             os.mkdir(target_dir)
 
-        for instance_dir in instance_dirs:
+        for instance_dir in tqdm(instance_dirs):
 
             shape_dir = os.path.join(class_path, instance_dir)
 

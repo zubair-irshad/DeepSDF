@@ -58,8 +58,12 @@ def create_mesh(
     sdf_values = samples[:, 3]
     sdf_values = sdf_values.reshape(N, N, N)
 
+    # print("sdf_values", sdf_values.shape)
+
+    # print("sdf min max", sdf_values.min(), sdf_values.max())
+
     end = time.time()
-    print("sampling takes: %f" % (end - start))
+    # print("sampling takes: %f" % (end - start))
 
     convert_sdf_samples_to_ply(
         sdf_values.data.cpu(),

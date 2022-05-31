@@ -49,6 +49,35 @@ def load_model_parameters(experiment_directory, checkpoint, decoder):
 
     return data["epoch"]
 
+def load_model_parameters_auto_encoder(experiment_directory, checkpoint, encoder, decoder):
+
+    filename = os.path.join(
+        experiment_directory, model_params_subdir, checkpoint + ".pth"
+    )
+
+    if not os.path.isfile(filename):
+        raise Exception('model state dict "{}" does not exist'.format(filename))
+
+    data = torch.load(filename)
+    encoder.load_state_dict(data["encoder_model_state_dict"])
+    decoder.load_state_dict(data["decoder_model_state_dict"])
+
+    return data["epoch"]
+
+def load_model_parameters_auto_encoder_frozen(experiment_directory, checkpoint, decoder):
+
+    filename = os.path.join(
+        experiment_directory, model_params_subdir, checkpoint + ".pth"
+    )
+
+    if not os.path.isfile(filename):
+        raise Exception('model state dict "{}" does not exist'.format(filename))
+
+    data = torch.load(filename)
+    decoder.load_state_dict(data["decoder_model_state_dict"])
+
+    return data["epoch"]
+
 
 def build_decoder(experiment_directory, experiment_specs):
 
@@ -92,7 +121,7 @@ def load_latent_vectors(experiment_directory, checkpoint):
     data = torch.load(filename)
 
     if isinstance(data["latent_codes"], torch.Tensor):
-
+        print("latent code is torch tensooor")
         num_vecs = data["latent_codes"].size()[0]
 
         lat_vecs = []
@@ -102,7 +131,7 @@ def load_latent_vectors(experiment_directory, checkpoint):
         return lat_vecs
 
     else:
-
+        print("latent code is EMBEDDDDING")
         num_embeddings, embedding_dim = data["latent_codes"]["weight"].shape
 
         lat_vecs = torch.nn.Embedding(num_embeddings, embedding_dim)

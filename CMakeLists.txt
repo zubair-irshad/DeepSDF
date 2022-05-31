@@ -1,6 +1,5 @@
 project("DeepSDF")
 cmake_minimum_required(VERSION 3.0)
-
 find_package(CLI11 CONFIG REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nanoflann REQUIRED)

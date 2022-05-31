@@ -9,6 +9,7 @@ import torch
 
 import deep_sdf
 import deep_sdf.workspace as ws
+from tqdm import tqdm
 
 
 def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
@@ -30,8 +31,9 @@ def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
 
     decoder = torch.nn.DataParallel(decoder)
 
+    print("path ckpt", os.path.join(experiment_directory, ws.model_params_subdir, checkpoint + ".pth"))
     saved_model_state = torch.load(
-        os.path.join(experiment_directory, ws.model_params_subdir, checkpoint + ".pth")
+        os.path.join('/home/ubuntu/DeepSDF', experiment_directory, ws.model_params_subdir, checkpoint + ".pth")
     )
     saved_model_epoch = saved_model_state["epoch"]
 
@@ -52,14 +54,14 @@ def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
 
     instance_filenames = deep_sdf.data.get_instance_filenames(data_source, train_split)
 
-    print(len(instance_filenames), " vs ", len(latent_vectors))
+    # print(len(instance_filenames), " vs ", len(latent_vectors))
 
-    for i, latent_vector in enumerate(latent_vectors):
+    for i, latent_vector in enumerate(tqdm(latent_vectors)):
 
         dataset_name, class_name, instance_name = instance_filenames[i].split("/")
         instance_name = instance_name.split(".")[0]
 
-        print("{} {} {}".format(dataset_name, class_name, instance_name))
+        # print("{} {} {}".format(dataset_name, class_name, instance_name))
 
         mesh_dir = os.path.join(
             experiment_directory,
@@ -68,20 +70,19 @@ def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
             dataset_name,
             class_name,
         )
-        print(mesh_dir)
+        # print(mesh_dir)
 
         if not os.path.isdir(mesh_dir):
             os.makedirs(mesh_dir)
 
         mesh_filename = os.path.join(mesh_dir, instance_name)
 
-        print(instance_filenames[i])
+        # print(instance_filenames[i])
 
         offset = None
         scale = None
 
         if not keep_normalized:
-
             normalization_params = np.load(
                 ws.get_normalization_params_filename(
                     data_source, dataset_name, class_name, instance_name
@@ -90,6 +91,8 @@ def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
             offset = normalization_params["offset"]
             scale = normalization_params["scale"]
 
+        # print("latent vector", latent_vector.device, latent_vector.shape)
+        latent_vector = latent_vector.cuda()
         with torch.no_grad():
             deep_sdf.mesh.create_mesh(
                 decoder,
@@ -126,7 +129,7 @@ if __name__ == "__main__":
     arg_parser.add_argument(
         "--keep_normalization",
         dest="keep_normalized",
-        default=False,
+        default=True,
         action="store_true",
         help="If set, keep the meshes in the normalized scale.",
     )
